@@ -26,6 +26,13 @@ type UpdateResourcesViewEvent struct {
 	ExtraColumns []string `json:"extra_columns"`
 }
 
+// AthenaAPI defines the interface for Athena client operations used in this package.
+type AthenaAPI interface {
+	StartQueryExecution(ctx context.Context, params *athena.StartQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.StartQueryExecutionOutput, error)
+	GetQueryExecution(ctx context.Context, params *athena.GetQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.GetQueryExecutionOutput, error)
+	GetQueryResults(ctx context.Context, params *athena.GetQueryResultsInput, optFns ...func(*athena.Options)) (*athena.GetQueryResultsOutput, error)
+}
+
 func HandleRequest(ctx context.Context, event UpdateResourcesViewEvent) (string, error) {
 	log.Println("Setting up...")
 
@@ -37,6 +44,12 @@ func HandleRequest(ctx context.Context, event UpdateResourcesViewEvent) (string,
 	// Create an Athena client
 	svc := athena.NewFromConfig(awsCfg)
 
+	return HandleRequestWithClient(ctx, svc, event)
+}
+
+// HandleRequestWithClient contains the core logic for querying Athena and creating a unified view.
+// It accepts an AthenaAPI interface to allow for dependency injection and testing.
+func HandleRequestWithClient(ctx context.Context, svc AthenaAPI, event UpdateResourcesViewEvent) (string, error) {
 	// Set the query string
 	queryString := `WITH tables AS (
 SELECT table_name
@@ -189,7 +202,7 @@ FROM tables t;`
 	return "", nil
 }
 
-func waitForResults(ctx context.Context, svc *athena.Client, queryExecutionID string) error {
+func waitForResults(ctx context.Context, svc AthenaAPI, queryExecutionID string) error {
 	log.Println("Waiting for query results...")
 
 	// Check the query execution status until it's complete
