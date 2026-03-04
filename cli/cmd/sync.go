@@ -259,9 +259,13 @@ func sync(cmd *cobra.Command, args []string) error {
 		if source.OtelEndpointInsecure {
 			opts = append(opts, managedplugin.WithOtelEndpointInsecure())
 		}
+		sourceReg, err := SpecRegistryToPlugin(source.Registry)
+		if err != nil {
+			return err
+		}
 		cfg := managedplugin.Config{
 			Name:       source.Name,
-			Registry:   SpecRegistryToPlugin(source.Registry),
+			Registry:   sourceReg,
 			Version:    source.Version,
 			Path:       source.Path,
 			DockerAuth: source.DockerRegistryAuthToken,
@@ -303,9 +307,13 @@ func sync(cmd *cobra.Command, args []string) error {
 			opts = append(opts, managedplugin.WithNoSentry())
 		}
 
+		destReg, err := SpecRegistryToPlugin(destination.Registry)
+		if err != nil {
+			return err
+		}
 		cfg := managedplugin.Config{
 			Name:       destination.Name,
-			Registry:   SpecRegistryToPlugin(destination.Registry),
+			Registry:   destReg,
 			Version:    destination.Version,
 			Path:       destination.Path,
 			DockerAuth: destination.DockerRegistryAuthToken,
@@ -344,9 +352,13 @@ func sync(cmd *cobra.Command, args []string) error {
 			opts = append(opts, managedplugin.WithNoSentry())
 		}
 
+		transReg, err := SpecRegistryToPlugin(transformer.Registry)
+		if err != nil {
+			return err
+		}
 		cfg := managedplugin.Config{
 			Name:       transformer.Name,
-			Registry:   SpecRegistryToPlugin(transformer.Registry),
+			Registry:   transReg,
 			Version:    transformer.Version,
 			Path:       transformer.Path,
 			DockerAuth: transformer.DockerRegistryAuthToken,

@@ -95,11 +95,15 @@ func tables(cmd *cobra.Command, args []string) error {
 	pluginConfigs := make([]managedplugin.Config, len(sources))
 	sourceRegInferred := make([]bool, len(sources))
 	for i, sourceSpec := range sources {
+		srcReg, err := SpecRegistryToPlugin(sourceSpec.Registry)
+		if err != nil {
+			return err
+		}
 		pluginConfigs[i] = managedplugin.Config{
 			Name:       sourceSpec.Name,
 			Path:       sourceSpec.Path,
 			Version:    sourceSpec.Version,
-			Registry:   SpecRegistryToPlugin(sourceSpec.Registry),
+			Registry:   srcReg,
 			DockerAuth: sourceSpec.DockerRegistryAuthToken,
 		}
 		sourceRegInferred[i] = sourceSpec.Registry == specs.RegistryUnset
