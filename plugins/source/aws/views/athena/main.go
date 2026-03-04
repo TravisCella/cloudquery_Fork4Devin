@@ -99,7 +99,9 @@ FROM tables t;`
 	// Get the query execution ID
 	queryExecutionID := *result.QueryExecutionId
 
-	waitForResults(ctx, svc, queryExecutionID)
+	if err := waitForResults(ctx, svc, queryExecutionID); err != nil {
+		return "Error waiting for query results", err
+	}
 
 	log.Println("Reading query results...")
 	// Get the query results
