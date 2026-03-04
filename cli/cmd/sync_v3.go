@@ -53,24 +53,32 @@ var (
 	//go:embed data/tables_queries.yml
 	tablesQueriesString []byte
 	tablesQueries       []map[string]tableQueries
+	tablesQueriesOnce   gosync.Once
+	tablesQueriesErr    error
 )
 
-func init() {
-	if err := yaml.Unmarshal(tablesQueriesString, &tablesQueries); err != nil {
-		panic(err)
-	}
-	for _, tableQueries := range tablesQueries {
-		if len(tableQueries) != 1 {
-			panic(fmt.Sprintf("expected 1 table query, got %d", len(tableQueries)))
+func loadTablesQueries() ([]map[string]tableQueries, error) {
+	tablesQueriesOnce.Do(func() {
+		if err := yaml.Unmarshal(tablesQueriesString, &tablesQueries); err != nil {
+			tablesQueriesErr = fmt.Errorf("failed to parse tables_queries.yml: %w", err)
+			return
 		}
-		tableQuery := lo.Values(tableQueries)[0]
-		for _, destinationQuery := range tableQuery.Destinations {
-			destinationPaths := lo.Keys(destinationQuery)
-			if len(destinationPaths) != 1 {
-				panic(fmt.Sprintf("expected 1 destination query, got %d", len(destinationPaths)))
+		for _, tq := range tablesQueries {
+			if len(tq) != 1 {
+				tablesQueriesErr = fmt.Errorf("expected 1 table query, got %d", len(tq))
+				return
+			}
+			tableQuery := lo.Values(tq)[0]
+			for _, destinationQuery := range tableQuery.Destinations {
+				destinationPaths := lo.Keys(destinationQuery)
+				if len(destinationPaths) != 1 {
+					tablesQueriesErr = fmt.Errorf("expected 1 destination query, got %d", len(destinationPaths))
+					return
+				}
 			}
 		}
-	}
+	})
+	return tablesQueries, tablesQueriesErr
 }
 
 type v3source struct {
@@ -742,6 +750,12 @@ func hintSelectMessage(destinationSpecs []specs.Destination, statsPerTable *util
 		return
 	}
 
+	queries, err := loadTablesQueries()
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to load tables queries for hint message")
+		return
+	}
+
 	ensureDependencies := func(tableQuery tableQueries) bool {
 		for _, dependency := range tableQuery.Dependencies {
 			_, ok := sourceTables[dependency]
@@ -756,7 +770,7 @@ func hintSelectMessage(destinationSpecs []specs.Destination, statsPerTable *util
 		return spec.Path, spec
 	})
 
-	for _, tablePair := range tablesQueries {
+	for _, tablePair := range queries {
 		tables := lo.Keys(tablePair)
 		if len(tables) == 0 {
 			continue
