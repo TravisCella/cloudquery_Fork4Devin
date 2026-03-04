@@ -46,7 +46,7 @@ func HandleRequest(ctx context.Context, event UpdateResourcesViewEvent) (string,
 	// Create an Athena client
 	svc := athena.NewFromConfig(awsCfg)
 
-	return handleRequestWithClient(ctx, svc, event)
+	return HandleRequestWithClient(ctx, svc, event)
 }
 
 // safeDeref safely dereferences a string pointer, returning an empty string if the pointer is nil.
@@ -57,8 +57,9 @@ func safeDeref(s *string) string {
 	return *s
 }
 
-// handleRequestWithClient contains the core logic, accepting an AthenaAPI interface for testability.
-func handleRequestWithClient(ctx context.Context, svc AthenaAPI, event UpdateResourcesViewEvent) (string, error) {
+// HandleRequestWithClient contains the core logic for querying Athena and creating a unified view.
+// It accepts an AthenaAPI interface to allow for dependency injection and testing.
+func HandleRequestWithClient(ctx context.Context, svc AthenaAPI, event UpdateResourcesViewEvent) (string, error) {
 	// Set the query string
 	queryString := `WITH tables AS (
 SELECT table_name
