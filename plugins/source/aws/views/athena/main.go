@@ -49,6 +49,14 @@ func HandleRequest(ctx context.Context, event UpdateResourcesViewEvent) (string,
 	return handleRequestWithClient(ctx, svc, event)
 }
 
+// safeDeref safely dereferences a string pointer, returning an empty string if the pointer is nil.
+func safeDeref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 // handleRequestWithClient contains the core logic, accepting an AthenaAPI interface for testability.
 func handleRequestWithClient(ctx context.Context, svc AthenaAPI, event UpdateResourcesViewEvent) (string, error) {
 	// Set the query string
@@ -129,12 +137,22 @@ FROM tables t;`
 			// skip the header
 			continue
 		}
-		// Get the first column value from the row
+		// Validate row has expected number of columns
+		if len(row.Data) < 4 {
+			log.Printf("Skipping row %d: expected at least 4 columns, got %d", i, len(row.Data))
+			continue
+		}
+		name := safeDeref(row.Data[0].VarCharValue)
+		if name == "" {
+			log.Printf("Skipping row %d: table name is NULL or empty", i)
+			continue
+		}
+		// Get the column values from the row
 		tables = append(tables, table{
-			name:         *row.Data[0].VarCharValue,
-			hasRegion:    *row.Data[1].VarCharValue == "true",
-			hasTags:      *row.Data[2].VarCharValue == "true",
-			tagsDataType: *row.Data[3].VarCharValue,
+			name:         name,
+			hasRegion:    safeDeref(row.Data[1].VarCharValue) == "true",
+			hasTags:      safeDeref(row.Data[2].VarCharValue) == "true",
+			tagsDataType: safeDeref(row.Data[3].VarCharValue),
 		})
 	}
 	tableNames := make([]string, len(tables))
