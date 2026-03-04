@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -8,7 +9,7 @@ import (
 )
 
 func handleSendError(err error, client safeWriteClient, msgType string) error {
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		// we need to get back the original error
 		if _, err := client.CloseAndRecv(); err != nil {
 			if e, ok := status.FromError(err); ok {
