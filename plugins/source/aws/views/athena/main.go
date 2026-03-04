@@ -17,6 +17,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/athena/types"
 )
 
+// AthenaAPI defines the interface for Athena client operations needed by this plugin.
+// This enables mock-based unit testing without requiring real AWS credentials.
+type AthenaAPI interface {
+	StartQueryExecution(ctx context.Context, params *athena.StartQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.StartQueryExecutionOutput, error)
+	GetQueryExecution(ctx context.Context, params *athena.GetQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.GetQueryExecutionOutput, error)
+	GetQueryResults(ctx context.Context, params *athena.GetQueryResultsInput, optFns ...func(*athena.Options)) (*athena.GetQueryResultsOutput, error)
+}
+
 type UpdateResourcesViewEvent struct {
 	Catalog      string   `json:"catalog"`
 	Database     string   `json:"database"`
@@ -26,13 +34,7 @@ type UpdateResourcesViewEvent struct {
 	ExtraColumns []string `json:"extra_columns"`
 }
 
-// AthenaAPI defines the interface for Athena client operations used in this package.
-type AthenaAPI interface {
-	StartQueryExecution(ctx context.Context, params *athena.StartQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.StartQueryExecutionOutput, error)
-	GetQueryExecution(ctx context.Context, params *athena.GetQueryExecutionInput, optFns ...func(*athena.Options)) (*athena.GetQueryExecutionOutput, error)
-	GetQueryResults(ctx context.Context, params *athena.GetQueryResultsInput, optFns ...func(*athena.Options)) (*athena.GetQueryResultsOutput, error)
-}
-
+// HandleRequest is the main Lambda handler that creates or updates the aws_resources view.
 func HandleRequest(ctx context.Context, event UpdateResourcesViewEvent) (string, error) {
 	log.Println("Setting up...")
 
@@ -45,6 +47,14 @@ func HandleRequest(ctx context.Context, event UpdateResourcesViewEvent) (string,
 	svc := athena.NewFromConfig(awsCfg)
 
 	return HandleRequestWithClient(ctx, svc, event)
+}
+
+// safeDeref safely dereferences a string pointer, returning an empty string if the pointer is nil.
+func safeDeref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // HandleRequestWithClient contains the core logic for querying Athena and creating a unified view.
@@ -98,7 +108,9 @@ FROM tables t;`
 	// Get the query execution ID
 	queryExecutionID := *result.QueryExecutionId
 
-	waitForResults(ctx, svc, queryExecutionID)
+	if err := waitForResults(ctx, svc, queryExecutionID); err != nil {
+		return "Error waiting for query results", err
+	}
 
 	log.Println("Reading query results...")
 	// Get the query results
@@ -126,12 +138,22 @@ FROM tables t;`
 			// skip the header
 			continue
 		}
-		// Get the first column value from the row
+		// Validate row has expected number of columns
+		if len(row.Data) < 4 {
+			log.Printf("Skipping row %d: expected at least 4 columns, got %d", i, len(row.Data))
+			continue
+		}
+		name := safeDeref(row.Data[0].VarCharValue)
+		if name == "" {
+			log.Printf("Skipping row %d: table name is NULL or empty", i)
+			continue
+		}
+		// Get the column values from the row
 		tables = append(tables, table{
-			name:         *row.Data[0].VarCharValue,
-			hasRegion:    *row.Data[1].VarCharValue == "true",
-			hasTags:      *row.Data[2].VarCharValue == "true",
-			tagsDataType: *row.Data[3].VarCharValue,
+			name:         name,
+			hasRegion:    safeDeref(row.Data[1].VarCharValue) == "true",
+			hasTags:      safeDeref(row.Data[2].VarCharValue) == "true",
+			tagsDataType: safeDeref(row.Data[3].VarCharValue),
 		})
 	}
 	tableNames := make([]string, len(tables))

@@ -7,19 +7,19 @@ import (
 	"github.com/cloudquery/plugin-pb-go/managedplugin"
 )
 
-func SpecRegistryToPlugin(registry specs.Registry) managedplugin.Registry {
+func SpecRegistryToPlugin(registry specs.Registry) (managedplugin.Registry, error) {
 	switch registry {
 	case specs.RegistryGitHub:
-		return managedplugin.RegistryGithub
+		return managedplugin.RegistryGithub, nil
 	case specs.RegistryLocal:
-		return managedplugin.RegistryLocal
+		return managedplugin.RegistryLocal, nil
 	case specs.RegistryGRPC:
-		return managedplugin.RegistryGrpc
+		return managedplugin.RegistryGrpc, nil
 	case specs.RegistryDocker:
-		return managedplugin.RegistryDocker
+		return managedplugin.RegistryDocker, nil
 	case specs.RegistryCloudQuery:
-		return managedplugin.RegistryCloudQuery
+		return managedplugin.RegistryCloudQuery, nil
 	default:
-		panic(fmt.Sprintf("unknown registry %q", registry.String()))
+		return 0, fmt.Errorf("unknown registry %q", registry.String())
 	}
 }

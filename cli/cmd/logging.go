@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"os"
 
@@ -37,9 +36,10 @@ func initLogging(noLogFile bool, logLevel *enum.Enum, logFormat *enum.Enum, logC
 		}
 	}
 	if logConsole {
-		if err := os.Stdout.Close(); err != nil {
-			return nil, fmt.Errorf("failed to close stdout: %w", err)
-		}
+		// Redirect stdout to stderr instead of closing it, so that any
+		// subsequent fmt.Printf or os.Stdout.Write calls still produce
+		// output rather than silently failing on a closed file descriptor.
+		os.Stdout = os.Stderr
 		if logFormat.String() == "text" {
 			writers = append(writers, zerolog.ConsoleWriter{
 				Out:             os.Stderr,
