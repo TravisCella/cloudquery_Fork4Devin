@@ -80,11 +80,15 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 	sourcePluginConfigs := make([]managedplugin.Config, len(sources))
 	sourceRegInferred := make([]bool, len(sources))
 	for i, source := range sources {
+		srcReg, err := SpecRegistryToPlugin(source.Registry)
+		if err != nil {
+			return err
+		}
 		sourcePluginConfigs[i] = managedplugin.Config{
 			Name:       source.Name,
 			Version:    source.Version,
 			Path:       source.Path,
-			Registry:   SpecRegistryToPlugin(source.Registry),
+			Registry:   srcReg,
 			DockerAuth: source.DockerRegistryAuthToken,
 		}
 		sourceRegInferred[i] = source.RegistryInferred()
@@ -92,11 +96,15 @@ func validateConfig(cmd *cobra.Command, args []string) error {
 	destinationPluginConfigs := make([]managedplugin.Config, len(destinations))
 	destinationRegInferred := make([]bool, len(destinations))
 	for i, destination := range destinations {
+		dstReg, err := SpecRegistryToPlugin(destination.Registry)
+		if err != nil {
+			return err
+		}
 		destinationPluginConfigs[i] = managedplugin.Config{
 			Name:       destination.Name,
 			Version:    destination.Version,
 			Path:       destination.Path,
-			Registry:   SpecRegistryToPlugin(destination.Registry),
+			Registry:   dstReg,
 			DockerAuth: destination.DockerRegistryAuthToken,
 		}
 		destinationRegInferred[i] = destination.RegistryInferred()

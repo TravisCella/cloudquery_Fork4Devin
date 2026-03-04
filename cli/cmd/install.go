@@ -84,11 +84,15 @@ func installPlugin(cmd *cobra.Command, args []string) error {
 	sourcePluginConfigs := make([]managedplugin.Config, len(sources))
 	sourceRegInferred := make([]bool, len(sources))
 	for i, source := range sources {
+		srcReg, err := SpecRegistryToPlugin(source.Registry)
+		if err != nil {
+			return err
+		}
 		sourcePluginConfigs[i] = managedplugin.Config{
 			Name:       source.Name,
 			Version:    source.Version,
 			Path:       source.Path,
-			Registry:   SpecRegistryToPlugin(source.Registry),
+			Registry:   srcReg,
 			DockerAuth: source.DockerRegistryAuthToken,
 		}
 		sourceRegInferred[i] = source.RegistryInferred()
@@ -96,11 +100,15 @@ func installPlugin(cmd *cobra.Command, args []string) error {
 	destinationPluginConfigs := make([]managedplugin.Config, len(destinations))
 	destinationRegInferred := make([]bool, len(destinations))
 	for i, destination := range destinations {
+		dstReg, err := SpecRegistryToPlugin(destination.Registry)
+		if err != nil {
+			return err
+		}
 		destinationPluginConfigs[i] = managedplugin.Config{
 			Name:       destination.Name,
 			Version:    destination.Version,
 			Path:       destination.Path,
-			Registry:   SpecRegistryToPlugin(destination.Registry),
+			Registry:   dstReg,
 			DockerAuth: destination.DockerRegistryAuthToken,
 		}
 		destinationRegInferred[i] = destination.RegistryInferred()
@@ -109,11 +117,15 @@ func installPlugin(cmd *cobra.Command, args []string) error {
 	transformerPluginConfigs := make([]managedplugin.Config, len(transformers))
 	transformerRegInferred := make([]bool, len(transformers))
 	for i, transformer := range transformers {
+		transReg, err := SpecRegistryToPlugin(transformer.Registry)
+		if err != nil {
+			return err
+		}
 		transformerPluginConfigs[i] = managedplugin.Config{
 			Name:       transformer.Name,
 			Version:    transformer.Version,
 			Path:       transformer.Path,
-			Registry:   SpecRegistryToPlugin(transformer.Registry),
+			Registry:   transReg,
 			DockerAuth: transformer.DockerRegistryAuthToken,
 		}
 		transformerRegInferred[i] = transformer.RegistryInferred()

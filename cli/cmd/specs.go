@@ -16,84 +16,104 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func CLIRegistryToPbRegistry(registry specs.Registry) pbSpecs.Registry {
+func CLIRegistryToPbRegistry(registry specs.Registry) (pbSpecs.Registry, error) {
 	switch registry {
 	case specs.RegistryGitHub:
-		return pbSpecs.RegistryGithub
+		return pbSpecs.RegistryGithub, nil
 	case specs.RegistryLocal:
-		return pbSpecs.RegistryLocal
+		return pbSpecs.RegistryLocal, nil
 	case specs.RegistryGRPC:
-		return pbSpecs.RegistryGrpc
+		return pbSpecs.RegistryGrpc, nil
 	case specs.RegistryCloudQuery:
-		return pbSpecs.RegistryCloudQuery
+		return pbSpecs.RegistryCloudQuery, nil
 	default:
-		panic(fmt.Sprintf("unknown registry %q", registry.String()))
+		return 0, fmt.Errorf("unknown registry %q", registry.String())
 	}
 }
 
 // This converts CLI configuration to a source spec prior to V3 version
 // when our spec wasn't decoupled from the over the wire protocol
-func CLISourceSpecToPbSpec(spec specs.Source) pbSpecs.Source {
+func CLISourceSpecToPbSpec(spec specs.Source) (pbSpecs.Source, error) {
+	reg, err := CLIRegistryToPbRegistry(spec.Registry)
+	if err != nil {
+		return pbSpecs.Source{}, err
+	}
 	return pbSpecs.Source{
 		Name:                spec.Name,
 		Version:             spec.Version,
 		Path:                spec.Path,
-		Registry:            CLIRegistryToPbRegistry(spec.Registry),
+		Registry:            reg,
 		Tables:              spec.Tables,
 		SkipTables:          spec.SkipTables,
 		SkipDependentTables: *spec.SkipDependentTables,
 		Destinations:        spec.Destinations,
 		Spec:                spec.Spec,
 		DeterministicCQID:   spec.DeterministicCQID,
-	}
+	}, nil
 }
 
-func CLIWriteModeToPbWriteMode(writeMode specs.WriteMode) pbSpecs.WriteMode {
+func CLIWriteModeToPbWriteMode(writeMode specs.WriteMode) (pbSpecs.WriteMode, error) {
 	switch writeMode {
 	case specs.WriteModeAppend:
-		return pbSpecs.WriteModeAppend
+		return pbSpecs.WriteModeAppend, nil
 	case specs.WriteModeOverwrite:
-		return pbSpecs.WriteModeOverwrite
+		return pbSpecs.WriteModeOverwrite, nil
 	case specs.WriteModeOverwriteDeleteStale:
-		return pbSpecs.WriteModeOverwriteDeleteStale
+		return pbSpecs.WriteModeOverwriteDeleteStale, nil
 	default:
-		panic(fmt.Sprintf("unknown write mode %q", writeMode.String()))
+		return 0, fmt.Errorf("unknown write mode %q", writeMode.String())
 	}
 }
 
-func CLIMigrateModeToPbMigrateMode(migrateMode specs.MigrateMode) pbSpecs.MigrateMode {
+func CLIMigrateModeToPbMigrateMode(migrateMode specs.MigrateMode) (pbSpecs.MigrateMode, error) {
 	switch migrateMode {
 	case specs.MigrateModeSafe:
-		return pbSpecs.MigrateModeSafe
+		return pbSpecs.MigrateModeSafe, nil
 	case specs.MigrateModeForced:
-		return pbSpecs.MigrateModeForced
+		return pbSpecs.MigrateModeForced, nil
 	default:
-		panic(fmt.Sprintf("unknown migrate mode %q", migrateMode.String()))
+		return 0, fmt.Errorf("unknown migrate mode %q", migrateMode.String())
 	}
 }
 
-func CLIPkModeToPbPKMode(pkMode specs.PKMode) pbSpecs.PKMode {
+func CLIPkModeToPbPKMode(pkMode specs.PKMode) (pbSpecs.PKMode, error) {
 	switch pkMode {
 	case specs.PKModeCQID:
-		return pbSpecs.PKModeCQID
+		return pbSpecs.PKModeCQID, nil
 	case specs.PKModeDefaultKeys:
-		return pbSpecs.PKModeDefaultKeys
+		return pbSpecs.PKModeDefaultKeys, nil
 	default:
-		panic(fmt.Sprintf("unknown pk mode %q", pkMode.String()))
+		return 0, fmt.Errorf("unknown pk mode %q", pkMode.String())
 	}
 }
 
-func CLIDestinationSpecToPbSpec(spec specs.Destination) pbSpecs.Destination {
+func CLIDestinationSpecToPbSpec(spec specs.Destination) (pbSpecs.Destination, error) {
+	reg, err := CLIRegistryToPbRegistry(spec.Registry)
+	if err != nil {
+		return pbSpecs.Destination{}, err
+	}
+	wm, err := CLIWriteModeToPbWriteMode(spec.WriteMode)
+	if err != nil {
+		return pbSpecs.Destination{}, err
+	}
+	mm, err := CLIMigrateModeToPbMigrateMode(spec.MigrateMode)
+	if err != nil {
+		return pbSpecs.Destination{}, err
+	}
+	pk, err := CLIPkModeToPbPKMode(spec.PKMode)
+	if err != nil {
+		return pbSpecs.Destination{}, err
+	}
 	return pbSpecs.Destination{
 		Name:        spec.Name,
 		Version:     spec.Version,
 		Path:        spec.Path,
-		Registry:    CLIRegistryToPbRegistry(spec.Registry),
-		WriteMode:   CLIWriteModeToPbWriteMode(spec.WriteMode),
-		MigrateMode: CLIMigrateModeToPbMigrateMode(spec.MigrateMode),
-		PKMode:      CLIPkModeToPbPKMode(spec.PKMode),
+		Registry:    reg,
+		WriteMode:   wm,
+		MigrateMode: mm,
+		PKMode:      pk,
 		Spec:        spec.Spec,
-	}
+	}, nil
 }
 
 // initPlugin is a simple wrapper that will try to validate the spec before actually passing it to Init.

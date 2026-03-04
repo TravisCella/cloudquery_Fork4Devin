@@ -24,7 +24,11 @@ func migrateConnectionV1(ctx context.Context, sourceClient *managedplugin.Client
 	for i := range managedDestinationsClients {
 		destinationsPbClients[i] = pbdestination.NewDestinationClient(managedDestinationsClients[i].Conn)
 	}
-	specBytes, err := json.Marshal(CLISourceSpecToPbSpec(sourceSpec))
+	pbSourceSpec, err := CLISourceSpecToPbSpec(sourceSpec)
+	if err != nil {
+		return err
+	}
+	specBytes, err := json.Marshal(pbSourceSpec)
 	if err != nil {
 		return err
 	}
@@ -40,7 +44,11 @@ func migrateConnectionV1(ctx context.Context, sourceClient *managedplugin.Client
 
 	fmt.Printf("Starting migration with for: %s -> %s\n", sourceSpec.VersionString(), sourceSpec.Destinations)
 	for i := range managedDestinationsClients {
-		destSpecBytes, err := json.Marshal(CLIDestinationSpecToPbSpec(destinationSpecs[i]))
+		pbDestSpec, err := CLIDestinationSpecToPbSpec(destinationSpecs[i])
+		if err != nil {
+			return err
+		}
+		destSpecBytes, err := json.Marshal(pbDestSpec)
 		if err != nil {
 			return err
 		}

@@ -106,7 +106,11 @@ func syncConnectionV2(ctx context.Context, sourceClient *managedplugin.Client, d
 		destinationsPbClients[i] = destination.NewDestinationClient(destinationsClients[i].Conn)
 	}
 
-	specBytes, err := json.Marshal(CLISourceSpecToPbSpec(sourceSpec))
+	pbSourceSpec, err := CLISourceSpecToPbSpec(sourceSpec)
+	if err != nil {
+		return err
+	}
+	specBytes, err := json.Marshal(pbSourceSpec)
 	if err != nil {
 		return err
 	}
@@ -120,7 +124,11 @@ func syncConnectionV2(ctx context.Context, sourceClient *managedplugin.Client, d
 		return err
 	}
 	for i := range destinationsClients {
-		destSpecBytes, err := json.Marshal(CLIDestinationSpecToPbSpec(destinationSpecs[i]))
+		pbDestSpec, err := CLIDestinationSpecToPbSpec(destinationSpecs[i])
+		if err != nil {
+			return err
+		}
+		destSpecBytes, err := json.Marshal(pbDestSpec)
 		if err != nil {
 			return err
 		}
